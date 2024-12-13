@@ -1,5 +1,6 @@
 #include <ESP8266WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include <EEPROM.h>
 #include <Servo.h>
 
 // Pins
@@ -10,10 +11,10 @@ const int downButtonPin = D7;
 Servo derailleurServo;
 
 // Variables for gear and position tracking
-int currentGear = 1;
-const int maxGear = 12;
+int currentGear = 1;  // Start with gear 1
+const int maxGear = 5;
 const int minGear = 1;
-float currentPosition = 0; // Current servo position in degrees
+float currentPosition = 0; // Servo position in degrees
 
 // Winch parameters
 const float drumCircumference = 31.42; // mm (10mm diameter drum)
@@ -27,6 +28,10 @@ const char *password = "12345678";
 AsyncWebServer server(80);
 bool hotspotActive = false;
 
+// Button debouncing
+unsigned long lastDebounceTime = 0;
+const unsigned long debounceDelay = 200;
+
 void setup() {
   derailleurServo.attach(servoPin);
 
@@ -35,25 +40,29 @@ void setup() {
 
   Serial.begin(115200);
 
-  // Initialize servo position
+  // Initialize EEPROM
+  EEPROM.begin(512);
+  loadLastGear();
+
+  // Move servo to the last saved position
   moveToGear(currentGear);
 }
 
 void loop() {
-  // Check button states
-  bool upPressed = digitalRead(upButtonPin) == LOW;
-  bool downPressed = digitalRead(downButtonPin) == LOW;
+  unsigned long currentTime = millis();
 
-  // Toggle hotspot if both buttons are pressed simultaneously
-  if (upPressed && downPressed) {
-    toggleHotspot();
-    delay(500); // Debounce
-  } else if (upPressed) {
-    shiftUp();
-    delay(300); // Debounce
-  } else if (downPressed) {
-    shiftDown();
-    delay(300); // Debounce
+  // Check button states with debounce
+  if (currentTime - lastDebounceTime > debounceDelay) {
+    bool upPressed = digitalRead(upButtonPin) == LOW;
+    bool downPressed = digitalRead(downButtonPin) == LOW;
+
+    if (upPressed) {
+      shiftUp();
+      lastDebounceTime = currentTime;
+    } else if (downPressed) {
+      shiftDown();
+      lastDebounceTime = currentTime;
+    }
   }
 }
 
@@ -62,6 +71,7 @@ void shiftUp() {
   if (currentGear < maxGear) {
     currentGear++;
     moveToGear(currentGear);
+    saveLastGear(); // Save the updated gear position
   }
 }
 
@@ -70,20 +80,37 @@ void shiftDown() {
   if (currentGear > minGear) {
     currentGear--;
     moveToGear(currentGear);
+    saveLastGear(); // Save the updated gear position
   }
 }
 
 // Move to a specific gear
 void moveToGear(int gear) {
+  if (gear < minGear || gear > maxGear) {
+    Serial.println("Invalid gear! Ignoring command.");
+    return;
+  }
+
+  // Calculate target position
   float targetPull = gearCablePull[gear - 1];
   float targetPosition = (targetPull / drumCircumference) * 360; // Convert mm to degrees
 
-  derailleurServo.write(targetPosition / 180.0 * 180); // Convert degrees to servo range
+  // Clamp position within servo range (0° to 360°)
+  if (targetPosition < 0) targetPosition = 0;
+  if (targetPosition > 360) targetPosition = 360;
+
+  // Move servo to target position
+  derailleurServo.write(targetPosition / 180.0 * 180); // Map to servo range
   currentPosition = targetPosition;
 
-  Serial.println("Moved to gear " + String(gear) + " (Cable Pull: " + String(targetPull) +
+  // Update current gear
+  currentGear = gear;
+
+  Serial.println("Moved to gear " + String(gear) + 
+                 " (Cable Pull: " + String(targetPull) + 
                  " mm, Servo Position: " + String(targetPosition) + " degrees)");
 }
+
 
 // Toggle hotspot
 void toggleHotspot() {
@@ -107,7 +134,7 @@ void setupWebServer() {
     html += "<form method='GET' action='/set'>";
     for (int i = 0; i < 12; i++) {
       html += "Gear " + String(i + 1) + ": <input type='number' name='pull" + String(i + 1) +
-              "' value='" + String(gearCablePull[i]) + "'> mm<br>";
+               "' value='" + String(gearCablePull[i]) + "'> mm<br>";
     }
     html += "<input type='submit' value='Update'>";
     html += "</form>";
@@ -122,14 +149,50 @@ void setupWebServer() {
         gearCablePull[i] = request->getParam(paramName)->value().toFloat();
       }
     }
-    request->send(200, "text/html", "Settings updated! <a href='/'>Back</a>");
+    saveSettings(); // Save to EEPROM
+    request->send(200, "text/html", "Settings updated and saved! <a href='/'>Back</a>");
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
     float defaultPulls[12] = {0, 3.6, 7.2, 10.8, 14.4, 18.0, 21.6, 25.2, 28.8, 32.4, 36.0, 39.6};
     memcpy(gearCablePull, defaultPulls, sizeof(gearCablePull));
-    request->send(200, "text/html", "Settings reset to default! <a href='/'>Back</a>");
+    saveSettings(); // Save default settings to EEPROM
+    request->send(200, "text/html", "Settings reset to default and saved! <a href='/'>Back</a>");
   });
 
   server.begin();
+}
+
+// Save and load gear position to/from EEPROM
+void saveLastGear() {
+  EEPROM.put(0, currentGear);
+  EEPROM.commit();
+  Serial.println("Saved current gear: " + String(currentGear));
+}
+
+void loadLastGear() {
+  EEPROM.get(0, currentGear);
+  if (currentGear < minGear || currentGear > maxGear) {
+    currentGear = 1; // Default to gear 1 if out of range
+  }
+  Serial.println("Loaded last gear: " + String(currentGear));
+}
+
+// Save and load gear settings to/from EEPROM
+void saveSettings() {
+  for (int i = 0; i < 12; i++) {
+    EEPROM.put(i * sizeof(float) + sizeof(int), gearCablePull[i]);
+  }
+  EEPROM.commit();
+  Serial.println("Settings saved to EEPROM.");
+}
+
+void loadSettings() {
+  for (int i = 0; i < 12; i++) {
+    EEPROM.get(i * sizeof(float) + sizeof(int), gearCablePull[i]);
+    if (gearCablePull[i] < 0 || gearCablePull[i] > 50) {
+      gearCablePull[i] = i * 3.6; // Reset to default if values are out of range
+    }
+  }
+  Serial.println("Settings loaded from EEPROM.");
 }
