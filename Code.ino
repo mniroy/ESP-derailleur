@@ -163,6 +163,7 @@ void setupWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
     String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;}input[type=number]{width:60px;}button{width:30px;height:30px;} .sent{background-color:lightgreen;}</style></head><body>";
     html += "<h1>Derailleur Control</h1>";
+    html += "<p>Current Gear: " + String(currentGear) + "</p>";
     html += "<form id='gearForm'>";
     html += "<div>Max Gear: <input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12'></div><br>";
     for (int i = 0; i < 12; i++) {
