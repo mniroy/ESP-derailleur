@@ -189,20 +189,20 @@ void setupWebServer() {
     html += "<div>Max Gear: <button type='button' onclick='changeValue(\"maxGear\", -1)'>-</button>";
     html += "<input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12'>";
     html += "<button type='button' onclick='changeValue(\"maxGear\", 1)'>+</button>";
-    html += "<button type='button' onclick='sendMaxGear()'>✔</button></div><br>";
+    html += "<button type='button' onclick='sendMaxGear()'>OK</button></div><br>";
     for (int i = 0; i < maxGear; i++) {
       html += "<div>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
       html += "<input type='number' id='pull" + String(i + 1) + "' name='pull" + String(i + 1) + "' value='" + String(gearCablePull[i]) + "' step='0.1'>";
       html += "<button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", 0.1)'>+</button>";
-      html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>✔</button></div><br>";
+      html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>OK</button></div><br>";
     }
     html += "</form>";
     html += "<p><a href='/reset'>Reset to Default</a></p>";
     html += "<p><a href='/settings'>Wi-Fi Settings</a></p>";
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); input.value = (parseFloat(input.value) + delta).toFixed(1); }</script>";
-    html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); } }; xhr.send(); }</script>";
-    html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.send(); });</script>";
-    html += "<script>function sendMaxGear() { var input = document.getElementById('maxGear'); var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + input.value, true); xhr.send(); }</script>";
+    html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); location.reload(); } }; xhr.send(); }</script>";
+    html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); });</script>";
+    html += "<script>function sendMaxGear() { var input = document.getElementById('maxGear'); var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); }</script>";
     html += "<script>var ws = new WebSocket('ws://' + window.location.hostname + ':81/');";
     html += "ws.onmessage = function(event) { var data = JSON.parse(event.data); document.getElementById('currentGear').innerText = data.gear; };</script>";
     html += "</body></html>";
