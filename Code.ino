@@ -175,6 +175,7 @@ void setupWebServer() {
     String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>";
     html += "body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;background-color:#f4f4f9;color:#333;}";
     html += "h1{color:#444;}";
+    html += ".gear-info{font-size:1.5em;font-weight:bold;color:#007bff;margin:10px 0;}";
     html += "input[type=number]{width:60px;padding:5px;margin:5px 0;}";
     html += "button{width:30px;height:30px;margin:5px;background-color:#007bff;color:white;border:none;border-radius:5px;cursor:pointer;}";
     html += "button:hover{background-color:#0056b3;}";
@@ -183,14 +184,17 @@ void setupWebServer() {
     html += "a:hover{text-decoration:underline;}";
     html += "</style></head><body>";
     html += "<h1>Derailleur Control</h1>";
-    html += "<p>Current Gear: <span id='currentGear'>" + String(currentGear) + "</span></p>";
+    html += "<p>Current Gear: <span id='currentGear' class='gear-info'>" + String(currentGear) + "</span></p>";
     html += "<form id='gearForm'>";
-    html += "<div>Max Gear: <input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12'></div><br>";
-    for (int i = 0; i < 12; i++) {
-      html += "<div id='gear" + String(i + 1) + "'>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
+    html += "<div>Max Gear: <button type='button' onclick='changeValue(\"maxGear\", -1)'>-</button>";
+    html += "<input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12'>";
+    html += "<button type='button' onclick='changeValue(\"maxGear\", 1)'>+</button>";
+    html += "<button type='button' onclick='sendMaxGear()'>✔</button></div><br>";
+    for (int i = 0; i < maxGear; i++) {
+      html += "<div>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
       html += "<input type='number' id='pull" + String(i + 1) + "' name='pull" + String(i + 1) + "' value='" + String(gearCablePull[i]) + "' step='0.1'>";
-      html += "<button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", 0.1)'>+</button> mm";
-      html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>Send</button></div><br>";
+      html += "<button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", 0.1)'>+</button>";
+      html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>✔</button></div><br>";
     }
     html += "</form>";
     html += "<p><a href='/reset'>Reset to Default</a></p>";
@@ -198,6 +202,7 @@ void setupWebServer() {
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); input.value = (parseFloat(input.value) + delta).toFixed(1); }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); } }; xhr.send(); }</script>";
     html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.send(); });</script>";
+    html += "<script>function sendMaxGear() { var input = document.getElementById('maxGear'); var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + input.value, true); xhr.send(); }</script>";
     html += "<script>var ws = new WebSocket('ws://' + window.location.hostname + ':81/');";
     html += "ws.onmessage = function(event) { var data = JSON.parse(event.data); document.getElementById('currentGear').innerText = data.gear; };</script>";
     html += "</body></html>";
