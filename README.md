@@ -31,17 +31,24 @@ This project controls a derailleur using an ESP8266 microcontroller. The system 
 
 ## Web Interface
 The web interface allows users to:
-- View and update gear cable pull settings.
+- View the current gear position.
+- Update gear cable pull settings.
+- Update the maximum gear limit.
 - Reset settings to default values.
 
 ### Editing Derailleur Settings
 1. **Connect to the Wi-Fi hotspot**: Use the SSID and password provided in the code.
 2. **Open a web browser**: Navigate to the default web server address: `http://192.168.4.1`.
-3. **Update gear settings**:
+3. **View current gear**: The current gear position is displayed at the top of the page.
+4. **Update gear settings**:
    - On the main page, you will see a form with input fields for each gear.
    - Enter the desired cable pull values (in mm) for each gear.
-   - Click the "Update" button to save the new settings.
-4. **Reset to default settings**:
+   - Click the "Send" button next to each gear to save the new setting.
+   - The input field will turn green to indicate the setting has been sent.
+5. **Update maximum gear limit**:
+   - Change the value in the "Max Gear" input field.
+   - The new maximum gear limit will be saved automatically.
+6. **Reset to default settings**:
    - Click the "Reset to Default" link to reset all gear settings to their default values.
 
 ## Usage
@@ -56,3 +63,20 @@ The web interface allows users to:
    - The buzzer will beep three times to indicate the hotspot is deactivated.
 5. **Access the web interface**: Connect to the Wi-Fi hotspot and navigate to the web server to update settings.
    - Default web server address: `http://192.168.4.1`
+
+## Dependencies
+To compile and upload the code to the ESP8266, you need to install the following libraries:
+- **ESP8266WiFi**: Provides Wi-Fi connectivity.
+- **ESPAsyncWebServer**: Handles the web server functionality.
+- **EEPROM**: Manages EEPROM read/write operations.
+- **Servo**: Controls the servo motor.
+
+### Installing Dependencies
+1. **ESP8266WiFi** and **EEPROM** libraries are included with the ESP8266 core for Arduino. Install the ESP8266 core by following the instructions [here](https://github.com/esp8266/Arduino#installing-with-boards-manager).
+2. **ESPAsyncWebServer**:
+   - Install the ESPAsyncWebServer library from the Arduino Library Manager or download it from [GitHub](https://github.com/me-no-dev/ESPAsyncWebServer).
+   - Additionally, install the **AsyncTCP** library, which is a dependency for ESPAsyncWebServer.
+3. **Servo**:
+   - Install the Servo library from the Arduino Library Manager or download it from [GitHub](https://github.com/arduino-libraries/Servo).
+
+Make sure to include these libraries in your Arduino IDE before compiling and uploading the code.
