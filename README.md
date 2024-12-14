@@ -18,7 +18,7 @@ This project controls a derailleur using an ESP8266 microcontroller. The system 
 
 ## Key Variables
 - **currentGear**: Tracks the current gear.
-- **maxGear**: Maximum gear limit.
+- **maxGear**: Maximum gear limit. (up to 12)
 - **minGear**: Minimum gear limit.
 - **currentPosition**: Current servo position in degrees.
 - **gearCablePull**: Array storing the cable pull in mm for each gear.
