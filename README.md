@@ -8,11 +8,13 @@ This project controls a derailleur using an ESP8266 microcontroller. The system 
 - **Servo**: Controls the derailleur position.
 - **Buttons**: Used for shifting up and down.
 - **EEPROM**: Stores the current gear and settings.
+- **Buzzer**: Provides audio feedback for hotspot activation and deactivation.
 
 ## Pin Configuration
 - **servoPin (D5)**: Connected to the servo motor.
 - **upButtonPin (D6)**: Connected to the button for shifting up.
 - **downButtonPin (D7)**: Connected to the button for shifting down.
+- **buzzerPin (D8)**: Connected to the buzzer.
 
 ## Key Variables
 - **currentGear**: Tracks the current gear.
@@ -45,5 +47,12 @@ The web interface allows users to:
 ## Usage
 1. **Power on the device**: The system initializes and moves the servo to the last saved gear position.
 2. **Shift gears**: Use the up and down buttons to shift gears.
-3. **Access the web interface**: Connect to the Wi-Fi hotspot and navigate to the web server to update settings.
+3. **Activate the hotspot**: 
+   - Press both the up and down buttons for 3 seconds to activate the hotspot.
+   - The hotspot SSID is `DerailleurControl` and the password is `12345678`.
+   - The buzzer will beep twice to indicate the hotspot is activated.
+4. **Deactivate the hotspot**: 
+   - Press both the up and down buttons for 5 seconds to deactivate the hotspot.
+   - The buzzer will beep three times to indicate the hotspot is deactivated.
+5. **Access the web interface**: Connect to the Wi-Fi hotspot and navigate to the web server to update settings.
    - Default web server address: `http://192.168.4.1`

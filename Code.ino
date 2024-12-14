@@ -7,6 +7,7 @@
 const int servoPin = D5;
 const int upButtonPin = D6;
 const int downButtonPin = D7;
+const int buzzerPin = D8; // Define the buzzer pin
 
 Servo derailleurServo;
 
@@ -28,15 +29,19 @@ const char *password = "12345678";
 AsyncWebServer server(80);
 bool hotspotActive = false;
 
-// Button debouncing
+// Button debouncing and hotspot activation
 unsigned long lastDebounceTime = 0;
 const unsigned long debounceDelay = 200;
+unsigned long hotspotActivationTime = 0;
+const unsigned long hotspotActivationDelay = 3000; // 3 seconds
+const unsigned long hotspotDeactivationDelay = 5000; // 5 seconds
 
 void setup() {
   derailleurServo.attach(servoPin);
 
   pinMode(upButtonPin, INPUT_PULLUP);
   pinMode(downButtonPin, INPUT_PULLUP);
+  pinMode(buzzerPin, OUTPUT); // Set buzzer pin as output
 
   Serial.begin(115200);
 
@@ -56,10 +61,24 @@ void loop() {
     bool upPressed = digitalRead(upButtonPin) == LOW;
     bool downPressed = digitalRead(downButtonPin) == LOW;
 
-    if (upPressed) {
+    if (upPressed && downPressed) {
+      if (hotspotActivationTime == 0) {
+        hotspotActivationTime = currentTime;
+      } else if (currentTime - hotspotActivationTime >= hotspotActivationDelay && !hotspotActive) {
+        toggleHotspot();
+        hotspotActivationTime = 0; // Reset activation time
+      } else if (currentTime - hotspotActivationTime >= hotspotDeactivationDelay && hotspotActive) {
+        toggleHotspot();
+        hotspotActivationTime = 0; // Reset activation time
+      }
+    } else {
+      hotspotActivationTime = 0; // Reset activation time if buttons are released
+    }
+
+    if (upPressed && !downPressed) {
       shiftUp();
       lastDebounceTime = currentTime;
-    } else if (downPressed) {
+    } else if (downPressed && !upPressed) {
       shiftDown();
       lastDebounceTime = currentTime;
     }
@@ -119,11 +138,23 @@ void toggleHotspot() {
     server.end();
     hotspotActive = false;
     Serial.println("Hotspot and web server deactivated.");
+    beep(3); // 3 beeps for deactivation
   } else {
     WiFi.softAP(ssid, password);
     setupWebServer();
     hotspotActive = true;
     Serial.println("Hotspot and web server activated.");
+    beep(2); // 2 beeps for activation
+  }
+}
+
+// Beep function
+void beep(int times) {
+  for (int i = 0; i < times; i++) {
+    digitalWrite(buzzerPin, HIGH);
+    delay(100);
+    digitalWrite(buzzerPin, LOW);
+    delay(100);
   }
 }
 
