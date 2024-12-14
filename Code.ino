@@ -161,15 +161,20 @@ void beep(int times) {
 // Setup web server
 void setupWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = "<h1>Derailleur Control</h1>";
-    html += "<form method='GET' action='/set'>";
+    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;}input[type=number]{width:60px;}button{width:30px;height:30px;} .sent{background-color:lightgreen;}</style></head><body>";
+    html += "<h1>Derailleur Control</h1>";
+    html += "<form id='gearForm'>";
     for (int i = 0; i < 12; i++) {
-      html += "Gear " + String(i + 1) + ": <input type='number' name='pull" + String(i + 1) +
-               "' value='" + String(gearCablePull[i]) + "'> mm<br>";
+      html += "<div id='gear" + String(i + 1) + "'>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
+      html += "<input type='number' id='pull" + String(i + 1) + "' name='pull" + String(i + 1) + "' value='" + String(gearCablePull[i]) + "' step='0.1'>";
+      html += "<button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", 0.1)'>+</button> mm";
+      html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>Send</button></div><br>";
     }
-    html += "<input type='submit' value='Update'>";
     html += "</form>";
     html += "<p><a href='/reset'>Reset to Default</a></p>";
+    html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); input.value = (parseFloat(input.value) + delta).toFixed(1); }</script>";
+    html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); } }; xhr.send(); }</script>";
+    html += "</body></html>";
     request->send(200, "text/html", html);
   });
 
