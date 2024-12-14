@@ -162,7 +162,16 @@ void beep(int times) {
 // Setup web server
 void setupWebServer() {
   server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;}input[type=number]{width:60px;}button{width:30px;height:30px;} .sent{background-color:lightgreen;}</style></head><body>";
+    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>";
+    html += "body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;background-color:#f4f4f9;color:#333;}";
+    html += "h1{color:#444;}";
+    html += "input[type=number]{width:60px;padding:5px;margin:5px 0;}";
+    html += "button{width:30px;height:30px;margin:5px;background-color:#007bff;color:white;border:none;border-radius:5px;cursor:pointer;}";
+    html += "button:hover{background-color:#0056b3;}";
+    html += ".sent{background-color:lightgreen;}";
+    html += "a{color:#007bff;text-decoration:none;}";
+    html += "a:hover{text-decoration:underline;}";
+    html += "</style></head><body>";
     html += "<h1>Derailleur Control</h1>";
     html += "<p>Current Gear: " + String(currentGear) + "</p>";
     html += "<form id='gearForm'>";
@@ -227,7 +236,9 @@ void setupWebServer() {
       strncpy(ssid, request->getParam("ssid", true)->value().c_str(), sizeof(ssid));
       strncpy(password, request->getParam("password", true)->value().c_str(), sizeof(password));
       saveWiFiSettings();
-      request->send(200, "text/html", "Settings applied! <a href='/restartDevice'>Restart Device</a>");
+      request->send(200, "text/html", "Settings applied! Restarting device...");
+      delay(2000); // Delay to allow the response to be sent
+      ESP.restart(); // Restart the device to apply new settings
     } else {
       request->send(400, "text/html", "Invalid input! <a href='/settings'>Back</a>");
     }
@@ -291,4 +302,9 @@ void loadWiFiSettings() {
   EEPROM.get(2 * sizeof(int) + 12 * sizeof(float), ssid);
   EEPROM.get(2 * sizeof(int) + 12 * sizeof(float) + sizeof(ssid), password);
   Serial.println("Wi-Fi settings loaded from EEPROM.");
+  // Activate hotspot after loading Wi-Fi settings
+  WiFi.softAP(ssid, password);
+  setupWebServer();
+  hotspotActive = true;
+  Serial.println("Hotspot activated after loading Wi-Fi settings.");
 }
