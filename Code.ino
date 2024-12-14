@@ -175,6 +175,7 @@ void setupWebServer() {
     String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>";
     html += "body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;background-color:#f4f4f9;color:#333;}";
     html += "h1{color:#444;}";
+    html += "form{display:flex;flex-direction:column;align-items:flex-start;}";
     html += ".gear-info{font-size:1.5em;font-weight:bold;color:#007bff;margin:10px 0;}";
     html += "input[type=number]{width:60px;padding:5px;margin:5px 0;}";
     html += "button{width:30px;height:30px;margin:5px;background-color:#007bff;color:white;border:none;border-radius:5px;cursor:pointer;}";
@@ -187,7 +188,7 @@ void setupWebServer() {
     html += "<p>Current Gear: <span id='currentGear' class='gear-info'>" + String(currentGear) + "</span></p>";
     html += "<form id='gearForm'>";
     html += "<div>Max Gear: <button type='button' onclick='changeValue(\"maxGear\", -1)'>-</button>";
-    html += "<input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12'>";
+    html += "<input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12' pattern='[0-9]*'>";
     html += "<button type='button' onclick='changeValue(\"maxGear\", 1)'>+</button>";
     html += "<button type='button' onclick='sendMaxGear()'>OK</button></div><br>";
     for (int i = 0; i < maxGear; i++) {
@@ -236,7 +237,16 @@ void setupWebServer() {
   });
 
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
-    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;}input[type=text]{width:200px;}button{width:100px;height:30px;}</style></head><body>";
+    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>";
+    html += "body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;background-color:#f4f4f9;color:#333;}";
+    html += "h1{color:#444;}";
+    html += "form{display:flex;flex-direction:column;align-items:flex-start;}";
+    html += "input[type=text]{width:200px;padding:5px;margin:5px 0;}";
+    html += "button{width:100px;height:30px;margin:5px;background-color:#007bff;color:white;border:none;border-radius:5px;cursor:pointer;}";
+    html += "button:hover{background-color:#0056b3;}";
+    html += "a{color:#007bff;text-decoration:none;}";
+    html += "a:hover{text-decoration:underline;}";
+    html += "</style></head><body>";
     html += "<h1>Wi-Fi Settings</h1>";
     html += "<form action='/applySettings' method='POST'>";
     html += "<div>SSID: <input type='text' name='ssid' value='" + String(ssid) + "'></div><br>";
