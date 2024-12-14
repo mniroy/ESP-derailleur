@@ -1,7 +1,7 @@
 # ESP-derailleur
 
 ## Overview
-This project controls a derailleur using an ESP8266 microcontroller. The system allows for shifting gears via buttons and a web interface. The current gear and settings are saved to EEPROM to retain state between power cycles.
+This project controls a derailleur using an ESP8266 microcontroller. The system allows for shifting gears via buttons and a web interface. The current gear and settings are saved to EEPROM to retain state between power cycles. The web interface now updates the current gear in real-time using WebSockets.
 
 ## Components
 - **ESP8266**: The microcontroller used for Wi-Fi connectivity and control.
@@ -27,11 +27,12 @@ This project controls a derailleur using an ESP8266 microcontroller. The system 
 - **ssid**: Wi-Fi SSID for the hotspot.
 - **password**: Password for the Wi-Fi hotspot.
 - **server**: AsyncWebServer instance for handling web requests.
+- **webSocket**: WebSocketsServer instance for real-time updates.
 - **hotspotActive**: Boolean indicating if the hotspot is active.
 
 ## Web Interface
 The web interface allows users to:
-- View the current gear position.
+- View the current gear position in real-time.
 - Update gear cable pull settings.
 - Update the maximum gear limit.
 - Reset settings to default values.
@@ -39,7 +40,7 @@ The web interface allows users to:
 ### Editing Derailleur Settings
 1. **Connect to the Wi-Fi hotspot**: Use the SSID and password provided in the code.
 2. **Open a web browser**: Navigate to the default web server address: `http://192.168.4.1`.
-3. **View current gear**: The current gear position is displayed at the top of the page.
+3. **View current gear**: The current gear position is displayed at the top of the page and updates in real-time.
 4. **Update gear settings**:
    - On the main page, you will see a form with input fields for each gear.
    - Enter the desired cable pull values (in mm) for each gear.
@@ -70,6 +71,7 @@ To compile and upload the code to the ESP8266, you need to install the following
 - **ESPAsyncWebServer**: Handles the web server functionality.
 - **EEPROM**: Manages EEPROM read/write operations.
 - **Servo**: Controls the servo motor.
+- **WebSocketsServer**: Provides WebSocket functionality for real-time updates.
 
 ### Installing Dependencies
 1. **ESP8266WiFi** and **EEPROM** libraries are included with the ESP8266 core for Arduino. Install the ESP8266 core by following the instructions [here](https://github.com/esp8266/Arduino#installing-with-boards-manager).
@@ -78,5 +80,7 @@ To compile and upload the code to the ESP8266, you need to install the following
    - Additionally, install the **AsyncTCP** library, which is a dependency for ESPAsyncWebServer.
 3. **Servo**:
    - Install the Servo library from the Arduino Library Manager or download it from [GitHub](https://github.com/arduino-libraries/Servo).
+4. **WebSocketsServer**:
+   - Install the WebSocketsServer library from the Arduino Library Manager or download it from [GitHub](https://github.com/Links2004/arduinoWebSockets).
 
 Make sure to include these libraries in your Arduino IDE before compiling and uploading the code.
