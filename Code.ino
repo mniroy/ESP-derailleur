@@ -13,7 +13,7 @@ Servo derailleurServo;
 
 // Variables for gear and position tracking
 int currentGear = 1;  // Start with gear 1
-const int maxGear = 5;
+int maxGear = 5;
 const int minGear = 1;
 float currentPosition = 0; // Servo position in degrees
 
@@ -164,6 +164,7 @@ void setupWebServer() {
     String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;}input[type=number]{width:60px;}button{width:30px;height:30px;} .sent{background-color:lightgreen;}</style></head><body>";
     html += "<h1>Derailleur Control</h1>";
     html += "<form id='gearForm'>";
+    html += "<div>Max Gear: <input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12'></div><br>";
     for (int i = 0; i < 12; i++) {
       html += "<div id='gear" + String(i + 1) + "'>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
       html += "<input type='number' id='pull" + String(i + 1) + "' name='pull" + String(i + 1) + "' value='" + String(gearCablePull[i]) + "' step='0.1'>";
@@ -174,6 +175,7 @@ void setupWebServer() {
     html += "<p><a href='/reset'>Reset to Default</a></p>";
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); input.value = (parseFloat(input.value) + delta).toFixed(1); }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); } }; xhr.send(); }</script>";
+    html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.send(); });</script>";
     html += "</body></html>";
     request->send(200, "text/html", html);
   });
@@ -187,6 +189,14 @@ void setupWebServer() {
     }
     saveSettings(); // Save to EEPROM
     request->send(200, "text/html", "Settings updated and saved! <a href='/'>Back</a>");
+  });
+
+  server.on("/setMaxGear", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("maxGear")) {
+      maxGear = request->getParam("maxGear")->value().toInt();
+      saveSettings(); // Save to EEPROM
+    }
+    request->send(200, "text/html", "Max gear updated and saved! <a href='/'>Back</a>");
   });
 
   server.on("/reset", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -216,16 +226,20 @@ void loadLastGear() {
 
 // Save and load gear settings to/from EEPROM
 void saveSettings() {
+  EEPROM.put(0, currentGear);
+  EEPROM.put(sizeof(int), maxGear);
   for (int i = 0; i < 12; i++) {
-    EEPROM.put(i * sizeof(float) + sizeof(int), gearCablePull[i]);
+    EEPROM.put(i * sizeof(float) + 2 * sizeof(int), gearCablePull[i]);
   }
   EEPROM.commit();
   Serial.println("Settings saved to EEPROM.");
 }
 
 void loadSettings() {
+  EEPROM.get(0, currentGear);
+  EEPROM.get(sizeof(int), maxGear);
   for (int i = 0; i < 12; i++) {
-    EEPROM.get(i * sizeof(float) + sizeof(int), gearCablePull[i]);
+    EEPROM.get(i * sizeof(float) + 2 * sizeof(int), gearCablePull[i]);
     if (gearCablePull[i] < 0 || gearCablePull[i] > 50) {
       gearCablePull[i] = i * 3.6; // Reset to default if values are out of range
     }
