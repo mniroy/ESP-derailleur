@@ -22,19 +22,19 @@ const float drumCircumference = 31.42; // mm (10mm diameter drum)
 float gearCablePull[12] = {0, 3.6, 7.2, 10.8, 14.4, 18.0, 21.6, 25.2, 28.8, 32.4, 36.0, 39.6}; // mm per gear
 
 // Wi-Fi credentials
-const char *ssid = "DerailleurControl";
-const char *password = "12345678";
+char ssid[32] = "DerailleurControl";
+char password[32] = "12345678";
 
 // Web server
 AsyncWebServer server(80);
 bool hotspotActive = false;
 
-// Button debouncing and hotspot activation
+// Button debouncing and device activation
 unsigned long lastDebounceTime = 0;
 const unsigned long debounceDelay = 200;
-unsigned long hotspotActivationTime = 0;
-const unsigned long hotspotActivationDelay = 3000; // 3 seconds
-const unsigned long hotspotDeactivationDelay = 5000; // 5 seconds
+unsigned long deviceActivationTime = 0;
+const unsigned long deviceActivationDelay = 3000; // 3 seconds
+const unsigned long deviceDeactivationDelay = 5000; // 5 seconds
 
 void setup() {
   derailleurServo.attach(servoPin);
@@ -48,6 +48,7 @@ void setup() {
   // Initialize EEPROM
   EEPROM.begin(512);
   loadLastGear();
+  loadWiFiSettings();
 
   // Move servo to the last saved position
   moveToGear(currentGear);
@@ -62,17 +63,17 @@ void loop() {
     bool downPressed = digitalRead(downButtonPin) == LOW;
 
     if (upPressed && downPressed) {
-      if (hotspotActivationTime == 0) {
-        hotspotActivationTime = currentTime;
-      } else if (currentTime - hotspotActivationTime >= hotspotActivationDelay && !hotspotActive) {
-        toggleHotspot();
-        hotspotActivationTime = 0; // Reset activation time
-      } else if (currentTime - hotspotActivationTime >= hotspotDeactivationDelay && hotspotActive) {
-        toggleHotspot();
-        hotspotActivationTime = 0; // Reset activation time
+      if (deviceActivationTime == 0) {
+        deviceActivationTime = currentTime;
+      } else if (currentTime - deviceActivationTime >= deviceActivationDelay && !hotspotActive) {
+        toggleDevice();
+        deviceActivationTime = 0; // Reset activation time
+      } else if (currentTime - deviceActivationTime >= deviceDeactivationDelay && hotspotActive) {
+        toggleDevice();
+        deviceActivationTime = 0; // Reset activation time
       }
     } else {
-      hotspotActivationTime = 0; // Reset activation time if buttons are released
+      deviceActivationTime = 0; // Reset activation time if buttons are released
     }
 
     if (upPressed && !downPressed) {
@@ -131,19 +132,19 @@ void moveToGear(int gear) {
 }
 
 
-// Toggle hotspot
-void toggleHotspot() {
+// Toggle device
+void toggleDevice() {
   if (hotspotActive) {
     WiFi.softAPdisconnect(true);
     server.end();
     hotspotActive = false;
-    Serial.println("Hotspot and web server deactivated.");
+    Serial.println("Device and web server deactivated.");
     beep(3); // 3 beeps for deactivation
   } else {
     WiFi.softAP(ssid, password);
     setupWebServer();
     hotspotActive = true;
-    Serial.println("Hotspot and web server activated.");
+    Serial.println("Device and web server activated.");
     beep(2); // 2 beeps for activation
   }
 }
@@ -174,6 +175,7 @@ void setupWebServer() {
     }
     html += "</form>";
     html += "<p><a href='/reset'>Reset to Default</a></p>";
+    html += "<p><a href='/settings'>Wi-Fi Settings</a></p>";
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); input.value = (parseFloat(input.value) + delta).toFixed(1); }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); } }; xhr.send(); }</script>";
     html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.send(); });</script>";
@@ -205,6 +207,35 @@ void setupWebServer() {
     memcpy(gearCablePull, defaultPulls, sizeof(gearCablePull));
     saveSettings(); // Save default settings to EEPROM
     request->send(200, "text/html", "Settings reset to default and saved! <a href='/'>Back</a>");
+  });
+
+  server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
+    String html = "<!DOCTYPE html><html><head><meta name='viewport' content='width=device-width, initial-scale=1.0'><style>body{font-family:'Roboto', sans-serif;max-width:600px;margin:auto;padding:10px;}input[type=text]{width:200px;}button{width:100px;height:30px;}</style></head><body>";
+    html += "<h1>Wi-Fi Settings</h1>";
+    html += "<form action='/applySettings' method='POST'>";
+    html += "<div>SSID: <input type='text' name='ssid' value='" + String(ssid) + "'></div><br>";
+    html += "<div>Password: <input type='text' name='password' value='" + String(password) + "'></div><br>";
+    html += "<button type='submit'>Apply</button>";
+    html += "</form>";
+    html += "<p><a href='/'>Back to Main Page</a></p>";
+    html += "</body></html>";
+    request->send(200, "text/html", html);
+  });
+
+  server.on("/applySettings", HTTP_POST, [](AsyncWebServerRequest *request) {
+    if (request->hasParam("ssid", true) && request->hasParam("password", true)) {
+      strncpy(ssid, request->getParam("ssid", true)->value().c_str(), sizeof(ssid));
+      strncpy(password, request->getParam("password", true)->value().c_str(), sizeof(password));
+      saveWiFiSettings();
+      request->send(200, "text/html", "Settings applied! <a href='/restartDevice'>Restart Device</a>");
+    } else {
+      request->send(400, "text/html", "Invalid input! <a href='/settings'>Back</a>");
+    }
+  });
+
+  server.on("/restartDevice", HTTP_GET, [](AsyncWebServerRequest *request) {
+    toggleDevice();
+    request->send(200, "text/html", "Device restarted! <a href='/'>Back to Main Page</a>");
   });
 
   server.begin();
@@ -246,4 +277,18 @@ void loadSettings() {
     }
   }
   Serial.println("Settings loaded from EEPROM.");
+}
+
+// Save and load Wi-Fi settings to/from EEPROM
+void saveWiFiSettings() {
+  EEPROM.put(2 * sizeof(int) + 12 * sizeof(float), ssid);
+  EEPROM.put(2 * sizeof(int) + 12 * sizeof(float) + sizeof(ssid), password);
+  EEPROM.commit();
+  Serial.println("Wi-Fi settings saved to EEPROM.");
+}
+
+void loadWiFiSettings() {
+  EEPROM.get(2 * sizeof(int) + 12 * sizeof(float), ssid);
+  EEPROM.get(2 * sizeof(int) + 12 * sizeof(float) + sizeof(ssid), password);
+  Serial.println("Wi-Fi settings loaded from EEPROM.");
 }
