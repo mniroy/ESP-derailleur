@@ -186,6 +186,7 @@ void setupWebServer() {
     html += "a:hover{text-decoration:underline;}";
     html += ".reset-button{display:inline-block;padding:10px 20px;margin:10px 0;background-color:#dc3545;color:white;text-align:center;text-decoration:none;border-radius:5px;}";
     html += ".reset-button:hover{background-color:#c82333;}";
+    html += "small{font-size:0.8em;font-style:italic;color:#666;}"; // Add style for small italic text
     html += "</style></head><body>";
     html += "<h1>RBE e-Derailleur</h1>";
     html += "<form id='gearForm'>";
@@ -195,6 +196,7 @@ void setupWebServer() {
     html += "<button type='button' onclick='changeValue(\"maxGear\", 1)'>+</button>";
     html += "<button type='button' onclick='sendMaxGear()'>OK</button></div><br>";
     html += "<hr style='margin:20px 0;'>"; // Add line separator
+    html += "<small>Input value in mm. Default setting is for Shimano Deore XT 12 speed.</small>"; // Add information in smaller font and italic
     for (int i = 0; i < maxGear; i++) {
       html += "<div>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
       html += "<input type='number' id='pull" + String(i + 1) + "' name='pull" + String(i + 1) + "' value='" + String(gearCablePull[i]) + "' step='0.1'>";
@@ -247,7 +249,7 @@ void setupWebServer() {
     float defaultPulls[12] = {0, 3.6, 7.2, 10.8, 14.4, 18.0, 21.6, 25.2, 28.8, 32.4, 36.0, 39.6};
     memcpy(gearCablePull, defaultPulls, sizeof(gearCablePull));
     saveSettings(); // Save default settings to EEPROM
-    request->send(200, "text/html", "Settings reset to default and saved! <a href='/'>Back</a>");
+    request->send(200, "text/plain", "Settings reset to default.");
   });
 
   server.on("/settings", HTTP_GET, [](AsyncWebServerRequest *request) {
