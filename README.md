@@ -36,6 +36,7 @@ The web interface allows users to:
 - Update gear cable pull settings.
 - Update the maximum gear limit.
 - Reset settings to default values.
+- Shift gears using UP and DOWN buttons.
 
 ### Editing Derailleur Settings
 1. **Connect to the Wi-Fi hotspot**: Use the SSID and password provided in the code.
@@ -49,7 +50,9 @@ The web interface allows users to:
 5. **Update maximum gear limit**:
    - Change the value in the "Max Gear" input field.
    - The new maximum gear limit will be saved automatically.
-6. **Reset to default settings**:
+6. **Shift gears**:
+   - Use the "UP" and "DOWN" buttons to shift gears.
+7. **Reset to default settings**:
    - Click the "Reset to Default" link to reset all gear settings to their default values.
 
 ## Usage
