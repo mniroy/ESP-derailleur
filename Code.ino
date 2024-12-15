@@ -41,8 +41,9 @@ const unsigned long deviceDeactivationDelay = 5000; // 5 seconds
 // Button press counters
 int upButtonPressCount = 0;
 int downButtonPressCount = 0;
-const int buttonPressThreshold = 5;
-const int hotspotActivationThreshold = 3;
+const int buttonPressThreshold = 10;
+const unsigned long buttonPressWindow = 5000; // 5 seconds window for counting button presses
+unsigned long firstButtonPressTime = 0;
 
 void setup() {
   derailleurServo.attach(servoPin);
@@ -87,10 +88,10 @@ void loop() {
       if (deviceActivationTime == 0) {
         deviceActivationTime = currentTime;
       } else if (currentTime - deviceActivationTime >= deviceActivationDelay && !hotspotActive) {
-        toggleDevice();
+        toggleDevice(); // Activate hotspot
         deviceActivationTime = 0; // Reset activation time
       } else if (currentTime - deviceActivationTime >= deviceDeactivationDelay && hotspotActive) {
-        toggleDevice();
+        toggleDevice(); // Deactivate hotspot
         deviceActivationTime = 0; // Reset activation time
       }
     } else {
@@ -100,34 +101,34 @@ void loop() {
       if (upPressed && !downPressed) {
         shiftUp();
         lastDebounceTime = currentTime;
+        if (firstButtonPressTime == 0) {
+          firstButtonPressTime = currentTime;
+        }
         upButtonPressCount++;
         downButtonPressCount = 0; // Reset down button press count
       } else if (downPressed && !upPressed) {
         shiftDown();
         lastDebounceTime = currentTime;
+        if (firstButtonPressTime == 0) {
+          firstButtonPressTime = currentTime;
+        }
         downButtonPressCount++;
         upButtonPressCount = 0; // Reset up button press count
       } else {
         upButtonPressCount = 0; // Reset up button press count if no button is pressed
         downButtonPressCount = 0; // Reset down button press count if no button is pressed
+        firstButtonPressTime = 0; // Reset first button press time if no button is pressed
       }
 
-      // Check if either button has been pressed 5 times to deactivate hotspot
-      if (upButtonPressCount >= buttonPressThreshold || downButtonPressCount >= buttonPressThreshold) {
+      // Check if either button has been pressed 10 times within 5 seconds to deactivate hotspot
+      if ((upButtonPressCount >= buttonPressThreshold || downButtonPressCount >= buttonPressThreshold) &&
+          (currentTime - firstButtonPressTime <= buttonPressWindow)) {
         if (hotspotActive) {
           toggleDevice(); // Deactivate hotspot
         }
         upButtonPressCount = 0; // Reset up button press count
         downButtonPressCount = 0; // Reset down button press count
-      }
-
-      // Check if either button has been pressed 3 times to activate hotspot
-      if (upButtonPressCount >= hotspotActivationThreshold || downButtonPressCount >= hotspotActivationThreshold) {
-        if (!hotspotActive) {
-          toggleDevice(); // Activate hotspot
-        }
-        upButtonPressCount = 0; // Reset up button press count
-        downButtonPressCount = 0; // Reset down button press count
+        firstButtonPressTime = 0; // Reset first button press time
       }
     }
   }
@@ -239,8 +240,10 @@ void setupWebServer() {
     html += ".sent{background-color:lightgreen;}";
     html += "a{color:#007bff;text-decoration:none;}";
     html += "a:hover{text-decoration:underline;}";
-    html += ".reset-button{display:inline-block;padding:10px 20px;margin:10px 0;background-color:#dc3545;color:white;text-align:center;text-decoration:none;border-radius:5px;}";
-    html += ".reset-button:hover{background-color:#c82333;}";
+    html += ".reset-button {display:inline-block;padding:10px 20px;margin:10px 0;background-color:#dc3545;color:white;text-align:center;text-decoration:none;border-radius:5px;}";
+    html += ".reset-button:hover {background-color:#c82333;}";
+    html += ".deactivate-button {display:inline-block;padding:10px 20px;margin:20px 0;background-color:#dc3545;color:white;text-align:center;text-decoration:none;border-radius:5px;}";
+    html += ".deactivate-button:hover {background-color:#c82333;}";
     html += "small{font-size:0.8em;font-style:italic;color:#666;}"; // Add style for small italic text
     html += "</style></head><body>";
     html += "<h1>RBE e-Derailleur</h1>";
@@ -268,13 +271,15 @@ void setupWebServer() {
     html += "</div><br>";
     html += "<hr style='margin:20px 0;'>"; // Add line separator
     html += "<p><a href='/settings'>Wi-Fi Settings</a></p>";
-    html += "<p><small>To deactivate wireless setting, press physical up or down buttons for 10 times within 5 seconds.</small></p>"; // Add info text in small and italic
+    html += "<p><small>To deactivate wireless setting, press the button below.</small></p>"; // Add info text in small and italic
+    html += "<a href='#' class='deactivate-button' onclick='deactivateHotspot()'>Deactivate Hotspot</a>"; // Add button to deactivate hotspot at the bottom
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); var newValue = parseInt(input.value) + delta; if (newValue > 12) newValue = 12; if (newValue < 1) newValue = 1; input.value = newValue; }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); location.reload(); } }; xhr.send(); }</script>";
     html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); });</script>";
     html += "<script>function sendMaxGear() { var input = document.getElementById('maxGear'); var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); }</script>";
     html += "<script>function shiftGear(direction) { var xhr = new XMLHttpRequest(); xhr.open('GET', '/' + direction, true); xhr.send(); }</script>";
     html += "<script>function resetSettings() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/reset', true); xhr.onload = function() { if (xhr.status == 200) { alert('Settings reset to default.'); location.reload(); } }; xhr.send(); }</script>"; // Add JavaScript function for reset
+    html += "<script>function deactivateHotspot() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/deactivateHotspot', true); xhr.onload = function() { if (xhr.status == 200) { alert('Hotspot deactivated.'); location.reload(); } }; xhr.send(); }</script>"; // Add JavaScript function for deactivating hotspot
     html += "<script>var ws = new WebSocket('ws://' + window.location.hostname + ':81/');";
     html += "ws.onmessage = function(event) { var data = JSON.parse(event.data); document.getElementById('currentGear').innerText = data.gear; };</script>";
     html += "</body></html>";
@@ -357,6 +362,13 @@ void setupWebServer() {
   server.on("/down", HTTP_GET, [](AsyncWebServerRequest *request) {
     shiftDown();
     request->send(200, "text/plain", "Shifted Down");
+  });
+
+  server.on("/deactivateHotspot", HTTP_GET, [](AsyncWebServerRequest *request) {
+    if (hotspotActive) {
+      toggleDevice(); // Deactivate hotspot
+    }
+    request->send(200, "text/plain", "Hotspot deactivated.");
   });
 
   server.begin();
