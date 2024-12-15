@@ -184,11 +184,15 @@ void setupWebServer() {
     html += ".sent{background-color:lightgreen;}";
     html += "a{color:#007bff;text-decoration:none;}";
     html += "a:hover{text-decoration:underline;}";
+    html += ".reset-button{display:inline-block;padding:10px 20px;margin:10px 0;background-color:#dc3545;color:white;text-align:center;text-decoration:none;border-radius:5px;}";
+    html += ".reset-button:hover{background-color:#c82333;}";
     html += "</style></head><body>";
-    html += "<h1>Derailleur Control</h1>";
+    html += "<h1>RBE e-Derailleur</h1>";
     html += "<form id='gearForm'>";
-    html += "<div>Max Gear: <button type='button' onclick='changeValue(\"maxGear\", -1)'>-</button>";
+    html += "<div>Max Gear:</div>"; // Place Max Gear text above
+    html += "<div><button type='button' onclick='changeValue(\"maxGear\", -1)'>-</button>";
     html += "<input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12' readonly pattern='[0-9]*' style='background-color:#e9ecef;border:none;font-weight:bold;'>";
+    html += "<button type='button' onclick='changeValue(\"maxGear\", 1)'>+</button>";
     html += "<button type='button' onclick='sendMaxGear()'>OK</button></div><br>";
     html += "<hr style='margin:20px 0;'>"; // Add line separator
     for (int i = 0; i < maxGear; i++) {
@@ -198,6 +202,7 @@ void setupWebServer() {
       html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>OK</button></div><br>";
     }
     html += "</form>";
+    html += "<a href='/reset' class='reset-button'>Reset to Default</a>"; // Style Reset to Default link
     html += "<hr style='margin:20px 0;'>"; // Add line separator
     html += "<h2>Wireless Gear Shifter</h2>"; // Add title
     html += "<p>Current Gear: <span id='currentGear' class='gear-info'>" + String(currentGear) + "</span></p>"; // Move current gear info
@@ -206,8 +211,8 @@ void setupWebServer() {
     html += "<button style='width:45%;height:50px;font-size:1.5em;' onclick='shiftGear(\"up\")'>UP</button>";
     html += "</div><br>";
     html += "<hr style='margin:20px 0;'>"; // Add line separator
-    html += "<p><a href='/reset'>Reset to Default</a></p>";
     html += "<p><a href='/settings'>Wi-Fi Settings</a></p>";
+    html += "<p>To deactivate wireless setting, press physical up and down buttons for 10 seconds.</p>"; // Add info text
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); var newValue = parseInt(input.value) + delta; if (newValue > 12) newValue = 12; if (newValue < 1) newValue = 1; input.value = newValue; }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); location.reload(); } }; xhr.send(); }</script>";
     html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); });</script>";
