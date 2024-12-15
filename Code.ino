@@ -195,8 +195,7 @@ void setupWebServer() {
     html += "<input type='number' id='maxGear' name='maxGear' value='" + String(maxGear) + "' step='1' min='1' max='12' readonly pattern='[0-9]*' style='background-color:#e9ecef;border:none;font-weight:bold;'>";
     html += "<button type='button' onclick='changeValue(\"maxGear\", 1)'>+</button>";
     html += "<button type='button' onclick='sendMaxGear()'>OK</button></div><br>";
-    html += "<hr style='margin:20px 0;'>"; // Add line separator
-    html += "<small>Input value in mm. Default setting is for Shimano Deore XT 12 speed.</small>"; // Add information in smaller font and italic
+    html += "<small>Input value in mm. Default setting is for Shimano Deore XT 12 speed.</small><br><br>"; // Add information in smaller font and italic with space below
     for (int i = 0; i < maxGear; i++) {
       html += "<div>Gear " + String(i + 1) + ": <button type='button' onclick='changeValue(\"pull" + String(i + 1) + "\", -0.1)'>-</button>";
       html += "<input type='number' id='pull" + String(i + 1) + "' name='pull" + String(i + 1) + "' value='" + String(gearCablePull[i]) + "' step='0.1'>";
@@ -214,7 +213,7 @@ void setupWebServer() {
     html += "</div><br>";
     html += "<hr style='margin:20px 0;'>"; // Add line separator
     html += "<p><a href='/settings'>Wi-Fi Settings</a></p>";
-    html += "<p>To deactivate wireless setting, press physical up and down buttons for 10 seconds.</p>"; // Add info text
+    html += "<p><small>To deactivate wireless setting, press physical up and down buttons for 10 seconds.</small></p>"; // Add info text in small and italic
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); var newValue = parseInt(input.value) + delta; if (newValue > 12) newValue = 12; if (newValue < 1) newValue = 1; input.value = newValue; }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); location.reload(); } }; xhr.send(); }</script>";
     html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); });</script>";
