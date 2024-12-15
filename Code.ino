@@ -14,7 +14,7 @@ Servo derailleurServo;
 
 // Variables for gear and position tracking
 int currentGear = 1;  // Start with gear 1
-int maxGear = 5;
+int maxGear = 12;
 const int minGear = 1;
 float currentPosition = 0; // Servo position in degrees
 
@@ -38,6 +38,12 @@ unsigned long deviceActivationTime = 0;
 const unsigned long deviceActivationDelay = 3000; // 3 seconds
 const unsigned long deviceDeactivationDelay = 5000; // 5 seconds
 
+// Button press counters
+int upButtonPressCount = 0;
+int downButtonPressCount = 0;
+const int buttonPressThreshold = 5;
+const int hotspotActivationThreshold = 3;
+
 void setup() {
   derailleurServo.attach(servoPin);
 
@@ -54,6 +60,13 @@ void setup() {
   EEPROM.begin(512);
   loadLastGear();
   loadWiFiSettings();
+
+  // Ensure hotspot is not active by default
+  if (hotspotActive) {
+    WiFi.softAPdisconnect(true);
+    server.end();
+    hotspotActive = false;
+  }
 
   // Move servo to the last saved position
   moveToGear(currentGear);
@@ -87,9 +100,34 @@ void loop() {
       if (upPressed && !downPressed) {
         shiftUp();
         lastDebounceTime = currentTime;
+        upButtonPressCount++;
+        downButtonPressCount = 0; // Reset down button press count
       } else if (downPressed && !upPressed) {
         shiftDown();
         lastDebounceTime = currentTime;
+        downButtonPressCount++;
+        upButtonPressCount = 0; // Reset up button press count
+      } else {
+        upButtonPressCount = 0; // Reset up button press count if no button is pressed
+        downButtonPressCount = 0; // Reset down button press count if no button is pressed
+      }
+
+      // Check if either button has been pressed 5 times to deactivate hotspot
+      if (upButtonPressCount >= buttonPressThreshold || downButtonPressCount >= buttonPressThreshold) {
+        if (hotspotActive) {
+          toggleDevice(); // Deactivate hotspot
+        }
+        upButtonPressCount = 0; // Reset up button press count
+        downButtonPressCount = 0; // Reset down button press count
+      }
+
+      // Check if either button has been pressed 3 times to activate hotspot
+      if (upButtonPressCount >= hotspotActivationThreshold || downButtonPressCount >= hotspotActivationThreshold) {
+        if (!hotspotActive) {
+          toggleDevice(); // Activate hotspot
+        }
+        upButtonPressCount = 0; // Reset up button press count
+        downButtonPressCount = 0; // Reset down button press count
       }
     }
   }
@@ -220,7 +258,7 @@ void setupWebServer() {
       html += "<button type='button' onclick='sendSetting(" + String(i + 1) + ")'>OK</button></div><br>";
     }
     html += "</form>";
-    html += "<a href='/reset' class='reset-button'>Reset to Default</a>"; // Style Reset to Default link
+    html += "<a href='#' class='reset-button' onclick='resetSettings()'>Reset to Default</a>"; // Change to use JavaScript function
     html += "<hr style='margin:20px 0;'>"; // Add line separator
     html += "<h2>Wireless Gear Shifter</h2>"; // Add title
     html += "<p>Current Gear: <span id='currentGear' class='gear-info'>" + String(currentGear) + "</span></p>"; // Move current gear info
@@ -230,12 +268,13 @@ void setupWebServer() {
     html += "</div><br>";
     html += "<hr style='margin:20px 0;'>"; // Add line separator
     html += "<p><a href='/settings'>Wi-Fi Settings</a></p>";
-    html += "<p><small>To deactivate wireless setting, press physical up and down buttons for 10 seconds.</small></p>"; // Add info text in small and italic
+    html += "<p><small>To deactivate wireless setting, press physical up or down buttons for 10 times within 5 seconds.</small></p>"; // Add info text in small and italic
     html += "<script>function changeValue(id, delta) { var input = document.getElementById(id); var newValue = parseInt(input.value) + delta; if (newValue > 12) newValue = 12; if (newValue < 1) newValue = 1; input.value = newValue; }</script>";
     html += "<script>function sendSetting(gear) { var input = document.getElementById('pull' + gear); var xhr = new XMLHttpRequest(); xhr.open('GET', '/set?pull' + gear + '=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { document.getElementById('gear' + gear).classList.add('sent'); location.reload(); } }; xhr.send(); }</script>";
     html += "<script>document.getElementById('maxGear').addEventListener('change', function() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + this.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); });</script>";
     html += "<script>function sendMaxGear() { var input = document.getElementById('maxGear'); var xhr = new XMLHttpRequest(); xhr.open('GET', '/setMaxGear?maxGear=' + input.value, true); xhr.onload = function() { if (xhr.status == 200) { location.reload(); } }; xhr.send(); }</script>";
     html += "<script>function shiftGear(direction) { var xhr = new XMLHttpRequest(); xhr.open('GET', '/' + direction, true); xhr.send(); }</script>";
+    html += "<script>function resetSettings() { var xhr = new XMLHttpRequest(); xhr.open('GET', '/reset', true); xhr.onload = function() { if (xhr.status == 200) { alert('Settings reset to default.'); location.reload(); } }; xhr.send(); }</script>"; // Add JavaScript function for reset
     html += "<script>var ws = new WebSocket('ws://' + window.location.hostname + ':81/');";
     html += "ws.onmessage = function(event) { var data = JSON.parse(event.data); document.getElementById('currentGear').innerText = data.gear; };</script>";
     html += "</body></html>";
@@ -373,11 +412,7 @@ void loadWiFiSettings() {
   EEPROM.get(2 * sizeof(int) + 12 * sizeof(float), ssid);
   EEPROM.get(2 * sizeof(int) + 12 * sizeof(float) + sizeof(ssid), password);
   Serial.println("Wi-Fi settings loaded from EEPROM.");
-  // Activate hotspot after loading Wi-Fi settings
-  WiFi.softAP(ssid, password);
-  setupWebServer();
-  hotspotActive = true;
-  Serial.println("Hotspot activated after loading Wi-Fi settings.");
+  // Do not activate hotspot after loading Wi-Fi settings
 }
 
 void notifyClients() {
