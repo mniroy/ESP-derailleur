@@ -47,6 +47,9 @@ void setup() {
 
   Serial.begin(115200);
 
+  // Play start-up melody
+  playStartupMelody();
+
   // Initialize EEPROM
   EEPROM.begin(512);
   loadLastGear();
@@ -166,6 +169,20 @@ void beep(int times) {
     delay(100);
     digitalWrite(buzzerPin, LOW);
     delay(100);
+  }
+}
+
+// Play start-up melody
+void playStartupMelody() {
+  int melody[] = {262, 294, 330, 349, 392, 440, 494, 523}; // Notes for the melody
+  int noteDurations[] = {4, 4, 4, 4, 4, 4, 4, 4}; // Note durations (4 = quarter note)
+
+  for (int thisNote = 0; thisNote < 8; thisNote++) {
+    int noteDuration = 1000 / noteDurations[thisNote];
+    tone(buzzerPin, melody[thisNote], noteDuration);
+    int pauseBetweenNotes = noteDuration * 1.30;
+    delay(pauseBetweenNotes);
+    noTone(buzzerPin);
   }
 }
 
